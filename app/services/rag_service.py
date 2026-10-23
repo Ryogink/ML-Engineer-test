@@ -48,6 +48,8 @@ def ingest_document(raw: bytes, ocr, settings, embedder, store) -> int:
                 all_metadatas.append({"doc_id": doc_id, "page": page_index, "chunk_index": idx})
 
     # Embed and store
+    if not all_chunks:
+        return 0
     embeddings = embedder.embed_documents(all_chunks)
     ids = []
     for i, meta in enumerate(all_metadatas):

@@ -15,7 +15,8 @@ class ChromaStore(VectorStore):
 
     def add_chunks(self, ids: list[str], embeddings: list[list[float]],
                    documents: list[str], metadatas: list[dict]) -> None:
-        self.collection.add(
+        # ponytail: upsert for deterministic AD-5 idempotency; collection.add silently ignores dup IDs in chroma 1.5.9
+        self.collection.upsert(
             ids=ids,
             embeddings=embeddings,
             documents=documents,

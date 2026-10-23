@@ -35,3 +35,4 @@ uv.lock
 _bmad/render/
 .bmad-loop/
 .claude/
+.agents/
