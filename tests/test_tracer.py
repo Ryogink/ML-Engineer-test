@@ -144,3 +144,34 @@ def test_external_service_failure(client):
     )
     # OCR failure surfaces as 502 per the ExternalServiceError mapping
     assert r.status_code == 502
+
+
+def test_names_json_plain_strings(client):
+    # Regression: a list of plain strings used to crash the router with a 500
+    words = [{"word": "Margaret", "page": 0, "x": 0, "y": 0, "width": 10, "height": 10},
+             {"word": "Thompson", "page": 0, "x": 12, "y": 0, "width": 10, "height": 10}]
+    app.dependency_overrides[get_ocr] = lambda: build_ocr_mock(words=words)
+    app.dependency_overrides[get_ner] = lambda: build_ner_mock(["Margaret Thompson"])
+    r = client.post(
+        "/api/extract",
+        files={"file": ("memo.pdf", b"%PDF-1.4 fake", "application/pdf")},
+        data={"names_json": '["Margaret Thompson", "Robert Chen", 42]'},
+    )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    extracted = {n["name"] for n in body["extracted_names"]}
+    assert "Margaret Thompson" in extracted
+    # "Robert Chen" merged but has no word box, so it never gets an ExtractedName
+    matched = {m["matched_name"] for m in body["fuzzy_matches"]}
+    assert "Margaret Thompson" in matched
+
+
+def test_names_json_garbage(client):
+    # Non-list / invalid JSON are tolerated as "no names provided"
+    r = client.post(
+        "/api/extract",
+        files={"file": ("memo.pdf", b"%PDF-1.4 fake", "application/pdf")},
+        data={"names_json": '{"first_name": "A"}'},
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["fuzzy_matches"] == []

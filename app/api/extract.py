@@ -27,8 +27,12 @@ def extract(
 ):
     try:
         names = json.loads(names_json)
-    except json.JSONDecodeError:
+    except (json.JSONDecodeError, TypeError):
         names = []
+    if not isinstance(names, list):
+        names = []
+    # Callers may pass plain strings; full_name expects {first_name, last_name}.
+    names = [nm if isinstance(nm, dict) else {"first_name": str(nm)} for nm in names]
 
     raw = validate_and_read(file, settings.max_upload_bytes)
 
