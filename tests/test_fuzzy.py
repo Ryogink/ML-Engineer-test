@@ -164,3 +164,37 @@ def test_full_match_pipeline(names_list):
     assert len(matches) >= 1
     assert matches[0].score >= 0.9
     assert matches[0].score <= 1.0
+
+
+# Refactor sweep (story 1.5): full_name consolidation helper
+# AC2 + I/O rows 1-2: helper produces identical results to the inline f-string
+try:
+    from app.services.fuzzy_service import full_name
+except ImportError:
+    # full_name not yet implemented — red phase
+    def full_name(pair):
+        raise NotImplementedError("full_name not yet implemented")
+
+
+def test_full_name_normal():
+    """I/O row 1: normal first/last dict produces 'First Last'."""
+    pair = {"first_name": "First", "last_name": "Last"}
+    assert full_name(pair) == "First Last"
+
+
+def test_full_name_missing_first():
+    """I/O row 2: missing first_name yields just last name (no KeyError)."""
+    pair = {"last_name": "Gonzalez"}
+    assert full_name(pair) == "Gonzalez"
+
+
+def test_full_name_extra_whitespace():
+    """I/O row 1 (whitespace): strips extra spaces around names."""
+    pair = {"first_name": "  First  ", "last_name": "  Last  "}
+    assert full_name(pair) == "First Last"
+
+
+def test_full_name_both_missing():
+    """Edge: no first or last name yields empty string (f-string behavior)."""
+    pair = {}
+    assert full_name(pair) == ""

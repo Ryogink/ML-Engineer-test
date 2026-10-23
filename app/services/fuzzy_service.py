@@ -9,6 +9,15 @@ import unicodedata
 from thefuzz import fuzz
 
 
+def full_name(pair: dict) -> str:
+    """Assemble 'First Last' from a caller name pair dict."""
+    first = (pair.get("first_name") or "").strip()
+    last = (pair.get("last_name") or "").strip()
+    if first and last:
+        return f"{first} {last}"
+    return first or last
+
+
 def _normalize(text: str) -> str:
     """NFKD normalize, casefold, strip accents."""
     nfkd = unicodedata.normalize("NFKD", text.casefold())
@@ -22,7 +31,7 @@ def fuzzy_match_names(
     results = []
     for extracted in extracted_names:
         for query in query_names:
-            query_full = f"{query.get('first_name', '')} {query.get('last_name', '')}".strip()
+            query_full = full_name(query)
             if not query_full:
                 continue
             score = fuzz.ratio(_normalize(extracted), _normalize(query_full))

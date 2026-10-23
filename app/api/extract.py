@@ -11,7 +11,8 @@ from app.dependencies import OcrProvider, get_ocr, get_ner
 from app.models.schemas import ExtractionResponse, ExtractedName, BoundingBox, FuzzyMatch
 from app.services.bbox_service import find_name_bounding_boxes, pixels_to_points
 from app.services.ner_service import extract_names
-from app.services.fuzzy_service import fuzzy_match_names
+from app.services.fuzzy_service import fuzzy_match_names, full_name
+from app.services.ner_service import NerProvider
 
 router = APIRouter()
 
@@ -22,7 +23,7 @@ def extract(
     names_json: str = Form("[]"),
     settings: Settings = Depends(get_settings),
     ocr: OcrProvider = Depends(get_ocr),
-    ner=Depends(get_ner),
+    ner: NerProvider = Depends(get_ner),
 ):
     try:
         names = json.loads(names_json)
@@ -50,7 +51,7 @@ def extract(
 
     # Merge with any caller-provided names
     for nm in names:
-        full = f"{nm.get('first_name', '')} {nm.get('last_name', '')}".strip()
+        full = full_name(nm)
         if full and full not in detected:
             detected.append(full)
 

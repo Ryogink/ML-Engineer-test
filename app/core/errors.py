@@ -1,5 +1,7 @@
 """Domain errors and HTTP mapping (AD-3)."""
 
+import functools
+
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
@@ -22,8 +24,6 @@ class ExternalServiceError(Exception):
 
 def external_guard(fn):
     """Wrap unexpected exceptions from external tech as ExternalServiceError (AD-3)."""
-    import functools
-
     @functools.wraps(fn)
     def wrapper(*args, **kwargs):
         try:
