@@ -16,6 +16,8 @@ def build_ocr_mock(text: str = "", words: list[dict] = []):
     class OcrMockOk(OcrProvider):
         def ocr_page(self, raw, page_index, dpi=None):
             return text, words
+        def page_count(self, raw):
+            return 1
 
     return OcrMockOk()
 
@@ -24,6 +26,8 @@ def build_ocr_fail():
     class OcrMockFail(OcrProvider):
         def ocr_page(self, raw, page_index, dpi=None):
             raise RuntimeError("tesseract exploded")
+        def page_count(self, raw):
+            return 1
 
     return OcrMockFail()
 

@@ -15,3 +15,6 @@ class TesseractOcr:
 
     def ocr_page(self, raw: bytes, page_index: int, dpi: int | None = None) -> tuple[str, list[dict]]:
         return ocr_service.ocr_page(raw, page_index, dpi or self.dpi)
+
+    def page_count(self, raw: bytes) -> int:
+        return ocr_service.page_count(raw)

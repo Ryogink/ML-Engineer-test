@@ -30,11 +30,22 @@ def extract(
 
     raw = validate_and_read(file, settings.max_upload_bytes)
 
-    # Tracer: page 1 only. OCR failure surfaces as ExternalServiceError (502).
-    page_index = 0
-    text, pixel_words = external_guard(ocr.ocr_page)(raw, page_index, settings.ocr_dpi)
+    # Loop over every page. OCR failure on any page surfaces as 502.
+    npages = external_guard(ocr.page_count)(raw)
+    all_pixel_words: list[dict] = []
+    all_text_parts: list[str] = []
+    for page_index in range(npages):
+        text, pixel_words = external_guard(ocr.ocr_page)(raw, page_index, settings.ocr_dpi)
+        all_text_parts.append(text)
+        all_pixel_words.extend(pixel_words)
 
-    detected = external_guard(extract_names)(text, ner)
+    # Run NER on the full document text
+    full_text = "\n".join(all_text_parts)
+    detected = external_guard(extract_names)(full_text, ner)
+
+    # Deduplicate: NER may report the same name multiple times in the text.
+    # Preserve order while removing duplicates.
+    detected = list(dict.fromkeys(detected))
 
     # Merge with any caller-provided names
     for nm in names:
@@ -43,20 +54,26 @@ def extract(
             detected.append(full)
 
     # Pixel→point conversion happens here, exactly once (AD-4)
-    words = pixels_to_points(pixel_words, settings.ocr_dpi)
+    words = pixels_to_points(all_pixel_words, settings.ocr_dpi)
+
+    # Group words by page — matching must stay within one page's word list
+    page_words: dict[int, list[dict]] = {}
+    for w in words:
+        page_words.setdefault(w["page"], []).append(w)
 
     results = []
     for name in detected:
-        for box in find_name_bounding_boxes(name, words):
-            results.append(ExtractedName(
-                name=name,
-                bounding_box=BoundingBox(
-                    page_number=box["page"],
-                    x=box["x"],
-                    y=box["y"],
-                    width=box["width"],
-                    height=box["height"],
-                ),
-            ))
+        for page in sorted(page_words.keys()):
+            for box in find_name_bounding_boxes(name, page_words[page]):
+                results.append(ExtractedName(
+                    name=name,
+                    bounding_box=BoundingBox(
+                        page_number=box["page"],
+                        x=box["x"],
+                        y=box["y"],
+                        width=box["width"],
+                        height=box["height"],
+                    ),
+                ))
 
     return ExtractionResponse(extracted_names=results, fuzzy_matches=[])

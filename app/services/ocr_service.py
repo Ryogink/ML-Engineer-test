@@ -19,6 +19,7 @@ from PIL import Image
 
 class OcrProvider(Protocol):
     def ocr_page(self, raw: bytes, page_index: int, dpi: int) -> tuple[str, list[dict]]: ...
+    def page_count(self, raw: bytes) -> int: ...
 
 
 def validate_and_read(file: UploadFile, max_bytes: int) -> bytes:
@@ -64,5 +65,17 @@ def ocr_page(raw: bytes, page_index: int, dpi: int) -> tuple[str, list[dict]]:
 
             full = pytesseract.image_to_string(img)
             return full, words
+    finally:
+        os.unlink(tmp_path)
+
+
+def page_count(raw: bytes) -> int:
+    """Return the number of pages in the PDF."""
+    fd, tmp_path = tempfile.mkstemp(suffix=".pdf")
+    try:
+        with os.fdopen(fd, "wb") as f:
+            f.write(raw)
+        with pymupdf.Document(tmp_path) as doc:
+            return len(doc)
     finally:
         os.unlink(tmp_path)
