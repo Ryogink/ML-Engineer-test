@@ -1,5 +1,6 @@
 # Internal grader material — never ship to candidates
 GRADING.md
+AGENTS.md
 
 # Python
 __pycache__/
