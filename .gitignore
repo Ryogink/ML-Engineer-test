@@ -16,6 +16,9 @@ venv/
 .env
 .env.*
 
+# Embedded vector store (runtime data, not source)
+.chroma/
+
 # OS / IDE
 .DS_Store
 .idea/

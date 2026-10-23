@@ -22,3 +22,9 @@ README anticipates. What they were used for:
 
 The engineering decisions recorded in `DESIGN.md` were made by reviewing and
 owning the resulting code, per the README's "own every line" condition.
+
+## RAG tracer-bullet schema contract (story 2.1)
+
+This story added no fields to `app/models/schemas.py`. The existing
+`IngestResponse`, `RAGRequest`, and `RAGResponse` models were used as-is;
+the API contract is unchanged.
