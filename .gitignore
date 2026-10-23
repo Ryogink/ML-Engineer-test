@@ -19,3 +19,15 @@ venv/
 .DS_Store
 .idea/
 .vscode/
+
+# BMad working files
+_bmad/
+_bmad-output/
+.serena/
+uv.lock
+.bmad-loop/runs/
+.bmad-loop/cache/
+.bmad-loop/policy.toml
+_bmad/render/
+.bmad-loop/
+.claude/
