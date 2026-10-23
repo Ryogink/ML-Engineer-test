@@ -8,9 +8,10 @@ from app.core.config import Settings, get_settings
 from app.core.errors import external_guard
 from app.services.ocr_service import validate_and_read
 from app.dependencies import OcrProvider, get_ocr, get_ner
-from app.models.schemas import ExtractionResponse, ExtractedName, BoundingBox
+from app.models.schemas import ExtractionResponse, ExtractedName, BoundingBox, FuzzyMatch
 from app.services.bbox_service import find_name_bounding_boxes, pixels_to_points
 from app.services.ner_service import extract_names
+from app.services.fuzzy_service import fuzzy_match_names
 
 router = APIRouter()
 
@@ -53,6 +54,17 @@ def extract(
         if full and full not in detected:
             detected.append(full)
 
+    # Fuzzy match against caller-provided names
+    fuzzy_results = fuzzy_match_names(detected, names, settings.fuzzy_match_threshold)
+    fuzzy_matches = [
+        FuzzyMatch(
+            extracted_name=r["extracted_name"],
+            matched_name=r["matched_name"],
+            score=r["score"],
+        )
+        for r in fuzzy_results
+    ]
+
     # Pixel→point conversion happens here, exactly once (AD-4)
     words = pixels_to_points(all_pixel_words, settings.ocr_dpi)
 
@@ -76,4 +88,4 @@ def extract(
                     ),
                 ))
 
-    return ExtractionResponse(extracted_names=results, fuzzy_matches=[])
+    return ExtractionResponse(extracted_names=results, fuzzy_matches=fuzzy_matches)
