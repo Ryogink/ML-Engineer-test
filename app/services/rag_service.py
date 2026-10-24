@@ -1,9 +1,14 @@
 """RAG service: chunk text and generate answers from retrieved context."""
 
 import hashlib
+import logging
 from typing import Protocol
 
 from app.core.errors import ExternalServiceError
+from app.core.http import with_retries
+from app.core.config import get_settings
+
+logger = logging.getLogger("app.services.rag_service")
 
 
 class LLMClient(Protocol):
@@ -50,26 +55,75 @@ def ingest_document(raw: bytes, ocr, settings, embedder, store) -> int:
     # Embed and store
     if not all_chunks:
         return 0
-    embeddings = embedder.embed_documents(all_chunks)
+
+    # Wrap embed call in retry
+    def _embed_chunks():
+        return embedder.embed_documents(all_chunks)
+
+    embeddings = with_retries(
+        _embed_chunks,
+        retries=settings.llm_max_retries,
+        backoff_seconds=settings.llm_backoff_seconds,
+        operation=f"embedding doc_id={doc_id}",
+    )
+
     ids = []
     for i, meta in enumerate(all_metadatas):
         ids.append(f"{meta['doc_id']}:{meta['page']}:{meta['chunk_index']}")
 
-    store.add_chunks(ids, embeddings, all_chunks, all_metadatas)
+    # Wrap store call in retry
+    def _store_chunks():
+        store.add_chunks(ids, embeddings, all_chunks, all_metadatas)
+
+    with_retries(
+        _store_chunks,
+        retries=settings.llm_max_retries,
+        backoff_seconds=settings.llm_backoff_seconds,
+        operation=f"storing chunks doc_id={doc_id}",
+    )
+
+    logger.info(
+        "ingest_document: doc_id=%s chunks_stored=%d",
+        doc_id,
+        len(all_chunks),
+    )
     return len(all_chunks)
 
 
 def generate_answer(question: str, embedder, store, llm, top_k) -> dict:
     """Retrieve relevant chunks and generate a grounded answer."""
-    query_embedding = embedder.embed_query(question)
-    results = store.query(query_embedding, top_k)
+    settings = get_settings()
+
+    # Wrap embed call in retry
+    def _embed_query():
+        return embedder.embed_query(question)
+
+    query_embedding = with_retries(
+        _embed_query,
+        retries=settings.llm_max_retries,
+        backoff_seconds=settings.llm_backoff_seconds,
+        operation=f"embedding query for '{question}'",
+    )
+
+    # Wrap store query in retry
+    def _query_store():
+        return store.query(query_embedding, top_k)
+
+    results = with_retries(
+        _query_store,
+        retries=settings.llm_max_retries,
+        backoff_seconds=settings.llm_backoff_seconds,
+        operation=f"querying store for '{question}'",
+    )
 
     # Build context from retrieved chunks
     context_parts = []
     sources = []
+    chunk_ids = []
     for r in results:
         text = r.get("text", "")
         sources.append(text)
+        chunk_ids.append(r.get("id", ""))
         context_parts.append(f"[{r.get('id', '')}] {text}")
 
     if not context_parts:
@@ -90,4 +144,9 @@ def generate_answer(question: str, embedder, store, llm, top_k) -> dict:
     except Exception as e:
         raise ExternalServiceError(f"LLM call failed: {e}") from e
 
+    logger.info(
+        "generate_answer: question=%r retrieved_chunk_ids=%s",
+        question,
+        chunk_ids,
+    )
     return {"answer": answer, "sources": sources}

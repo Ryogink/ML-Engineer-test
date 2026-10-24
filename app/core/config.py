@@ -2,6 +2,8 @@
 
 from pydantic_settings import BaseSettings
 
+_settings = None
+
 
 class Settings(BaseSettings):
     ocr_dpi: int = 300
@@ -29,4 +31,7 @@ class Settings(BaseSettings):
 
 
 def get_settings() -> Settings:
-    return Settings()
+    global _settings
+    if _settings is None:
+        _settings = Settings()
+    return _settings
