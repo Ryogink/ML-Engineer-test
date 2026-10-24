@@ -77,5 +77,4 @@ async def lifespan(app):
     get_embedding(settings)
     get_vector_store(settings)
     # LLM is lazy — constructed only when first /api/ask arrives
-    app.state.settings = settings
     yield
