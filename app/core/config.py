@@ -25,6 +25,9 @@ class Settings(BaseSettings):
     llm_max_retries: int = 3
     llm_backoff_seconds: float = 2.0
 
+    # Static files
+    static_dir: str = "static"
+
     class Config:
         env_prefix = "DIS_"
         extra = "ignore"
@@ -35,3 +38,9 @@ def get_settings() -> Settings:
     if _settings is None:
         _settings = Settings()
     return _settings
+
+
+def reset_settings() -> None:
+    """Test seam: drop the cached settings so the next get_settings() re-reads env."""
+    global _settings
+    _settings = None
