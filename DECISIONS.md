@@ -28,3 +28,30 @@ owning the resulting code, per the README's "own every line" condition.
 This story added no fields to `app/models/schemas.py`. The existing
 `IngestResponse`, `RAGRequest`, and `RAGResponse` models were used as-is;
 the API contract is unchanged.
+
+## Retry discipline on external calls (post-2.1)
+
+All external service calls (embedding, vector store operations, LLM calls)
+are wrapped with `with_retries()` from `app/core/http.py`, providing
+configurable timeout and exponential backoff. This ensures transient failures
+are handled gracefully rather than bubbling immediately to the caller.
+
+## Deterministic ingest via content-derived IDs (post-2.1)
+
+Chunk IDs are derived from document content hash (`sha256` of file bytes),
+page number, and chunk index. This makes ingest idempotent: re-ingesting the
+same document produces identical chunk IDs, enabling upsert semantics in
+Chroma rather than duplicate entries.
+
+## LangChain kwarg hygiene (post-2.1)
+
+Removed dead `retry_wait` kwarg from `ChatOpenAI` initialization and ensured
+the adapter passes no legacy kwargs. The adapter uses explicit `timeout` and
+`max_retries` parameters instead of relying on global or deprecated settings.
+
+## Schema contract affirmed across epics 1 and 2
+
+`app/models/schemas.py` remains byte-identical to the skeleton commit
+(b091afa). No fields were added, removed, or renamed across either epic.
+The end-to-end path through the real application is exercised by the test
+suite: tracer-bullet happy path, real-PDF all-pages tests, and RAG tests.
