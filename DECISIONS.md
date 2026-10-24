@@ -33,7 +33,7 @@ the API contract is unchanged.
 
 All external service calls (embedding, vector store operations, LLM calls)
 are wrapped with `with_retries()` from `app/core/http.py`, providing
-configurable timeout and exponential backoff. This ensures transient failures
+configurable timeout and fixed backoff. This ensures transient failures
 are handled gracefully rather than bubbling immediately to the caller.
 
 ## Deterministic ingest via content-derived IDs (post-2.1)

@@ -59,56 +59,50 @@ function overlayPdf(file, data) {
   const montage = document.getElementById("montage");
   montage.innerHTML = "<p>Loading PDF…</p>";
 
-  // ponytail: pdf.js from CDN; try/catch for CDN-failure handling
-  try {
-    file.arrayBuffer().then((buf) => {
-      pdfjsLib.getDocument({ data: buf }).promise.then((doc) => {
-        montage.innerHTML = "";
+  file.arrayBuffer().then((buf) => {
+    pdfjsLib.getDocument({ data: buf }).promise.then((doc) => {
+      montage.innerHTML = "";
 
-        for (const pn in groups) {
-          const pageEntries = groups[pn];
-          const pagePromise = doc.getPage(parseInt(pn) + 1).then(async (pdfjsPage) => {
-            const pageWrap = document.createElement("div");
-            pageWrap.className = "page-wrap";
+      for (const pn in groups) {
+        const pageEntries = groups[pn];
+        doc.getPage(parseInt(pn) + 1).then(async (pdfjsPage) => {
+          const pageWrap = document.createElement("div");
+          pageWrap.className = "page-wrap";
 
-            // Compute display scale: map PDF points to viewport pixels.
-            // Both spaces share origin top-left, y down.
-            const baseViewport = pdfjsPage.getViewport({ scale: 1 });
-            const canvas = document.createElement("canvas");
-            canvas.width = baseViewport.width;
-            canvas.height = baseViewport.height;
-            canvas.className = "page-canvas";
-            pageWrap.appendChild(canvas);
+          // Compute display scale: map PDF points to viewport pixels.
+          // Both spaces share origin top-left, y down.
+          const baseViewport = pdfjsPage.getViewport({ scale: 1 });
+          const canvas = document.createElement("canvas");
+          canvas.width = baseViewport.width;
+          canvas.height = baseViewport.height;
+          canvas.className = "page-canvas";
+          pageWrap.appendChild(canvas);
 
-            const ctx = canvas.getContext("2d");
-            await pdfjsPage.render({ canvasContext: ctx, viewport: baseViewport }).promise;
+          const ctx = canvas.getContext("2d");
+          await pdfjsPage.render({ canvasContext: ctx, viewport: baseViewport }).promise;
 
-            // Scale to viewport width for display
-            const k = canvas.clientWidth / baseViewport.width;
+          // Scale to viewport width for display
+          const k = canvas.clientWidth / baseViewport.width;
 
-            for (const entry of pageEntries) {
-              const bb = entry.bounding_box;
-              const box = document.createElement("div");
-              box.className = "overlay-box";
-              box.textContent = entry.name;
-              box.style.left = (bb.x * k) + "px";
-              box.style.top = (bb.y * k) + "px";
-              box.style.width = (bb.width * k) + "px";
-              box.style.height = (bb.height * k) + "px";
-              pageWrap.appendChild(box);
-            }
+          for (const entry of pageEntries) {
+            const bb = entry.bounding_box;
+            const box = document.createElement("div");
+            box.className = "overlay-box";
+            box.textContent = entry.name;
+            box.style.left = (bb.x * k) + "px";
+            box.style.top = (bb.y * k) + "px";
+            box.style.width = (bb.width * k) + "px";
+            box.style.height = (bb.height * k) + "px";
+            pageWrap.appendChild(box);
+          }
 
-            montage.appendChild(pageWrap);
-          });
-        }
-      }).catch((e) => {
-        showError("Failed to load PDF: " + e.message);
-      });
+          montage.appendChild(pageWrap);
+        });
+      }
+    }).catch((e) => {
+      showError("Failed to load PDF: " + e.message);
     });
-  } catch (e) {
-    // CDN-failure path: pdfjsLib undefined or crashed
-    showError("PDF viewer (pdf.js) failed to load: " + e.message);
-  }
+  });
 }
 
 // Immediate load-time CDN-failure check

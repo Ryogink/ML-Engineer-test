@@ -8,7 +8,6 @@ AC-4: Stack substitutions are justified in DESIGN.md
 AC-5: DECISIONS.md existing content is unchanged; new entries appended
 AC-6: Schema contract unchanged (git diff vs skeleton is empty)
 """
-import re
 import subprocess
 from pathlib import Path
 
