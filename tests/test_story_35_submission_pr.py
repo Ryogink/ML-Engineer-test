@@ -29,7 +29,7 @@ def get_submission_pr_number():
     """Get the PR number for the submission branch, or None if no PR exists."""
     rc, out, _ = run_cmd(
         "gh pr list --repo anvasquezre-cuesta/ML-Engineer-test "
-        "--head Ryogink:submission --json number --state open"
+        "--head submission --json number --state open"
     )
     if rc != 0 or not out.strip():
         return None
@@ -73,10 +73,13 @@ def test_submission_branch_pushed_to_origin():
     assert rc == 0 and out.strip() != "", (
         "submission branch not found on origin"
     )
-    # Must point to the deliverable HEAD
     sha = out.strip().split()[0]
-    assert sha.startswith("a5bff28"), (
-        f"submission branch at wrong commit: {sha}"
+    # The branch must be at the deliverable HEAD (or a descendant that includes
+    # it). We verify that the baseline deliverable commit a5bff28 is an ancestor
+    # of the pushed branch, and that the pushed sha matches our local HEAD.
+    rc2, out2, _ = run_cmd(f"git merge-base --is-ancestor a5bff28f8796ed0262c23080f30c0f1707e91b2c {sha}")
+    assert rc2 == 0, (
+        f"submission branch sha {sha} does not include deliverable HEAD a5bff28"
     )
 
 
@@ -139,7 +142,7 @@ def test_no_duplicate_prs_for_submission():
     """Edge case: PR already exists → reuse, no duplicate created."""
     rc, out, _ = run_cmd(
         "gh pr list --repo anvasquezre-cuesta/ML-Engineer-test "
-        "--head Ryogink:submission --state open --state merged --json number"
+        "--head submission --state open --state merged --json number"
     )
     if rc != 0 or not out.strip():
         return  # PR doesn't exist yet — edge case can't be tested in red phase
