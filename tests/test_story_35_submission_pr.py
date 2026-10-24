@@ -9,7 +9,6 @@ and opens the PR.
 import subprocess
 import os
 import json
-import re
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
