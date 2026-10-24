@@ -78,9 +78,9 @@ def generate_answer(question: str, embedder, store, llm, top_k) -> dict:
                 "sources": []}
 
     context = "\n".join(context_parts)
-    prompt = (f"You are a document Q&A assistant. Answer the question using only the "
-             f"retrieved context below. If the context does not contain the answer, say so. "
-             f"List the sources you used.\n\n"
+    prompt = (f"You are a document Q&A assistant. Answer the question using ONLY the "
+             f"retrieved context below. If the context does not contain the answer, "
+             f"state that it does not instead of inventing one. List the sources you used.\n\n"
              f"Context:\n{context}\n\n"
              f"Question: {question}\n\n"
              f"Answer:")
